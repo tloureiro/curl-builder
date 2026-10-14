@@ -1,0 +1,3 @@
+#!/bin/sh
+# Fast staged-content check. Full verification runs explicitly and in CI.
+exec git diff --cached --check

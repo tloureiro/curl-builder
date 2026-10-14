@@ -1,0 +1,344 @@
+{
+  "title": "curl-builder high complexity suite",
+  "scenarios": [
+    {
+      "id": "pipeline-variable-prompt",
+      "type": "feature",
+      "area": "Variables",
+      "description": "Detects multiple {{vars}} across URL, headers, body, cookies, jq, and grep; prompts once and substitutes everywhere.",
+      "preconditions": [
+        "Add URL https://api.example.com/{{tenant}}/users/{{userId}}",
+        "Header X-Auth: Bearer {{token}}; body raw JSON contains {{payload}}; cookie session={{session}}; jq expr .data[?(@.id==\"{{userId}}\")]; grep pattern {{tenant}}"
+      ],
+      "steps": [
+        "Click Run, fill prompt with distinct values for each var, confirm.",
+        "Open raw tab after run."
+      ],
+      "expected": [
+        "Single prompt lists all vars with no duplicates.",
+        "All occurrences in curl, jq, and grep are substituted with provided values.",
+        "Raw tab reruns curl using resolved variables without re-prompting."
+      ],
+      "visualChecks": [
+        "No {{var}} placeholders remain in the command preview after substitution.",
+        "Prompt layout fits all inputs without overflow."
+      ]
+    },
+    {
+      "id": "global-options-resolve",
+      "type": "function",
+      "area": "Global curl options",
+      "description": "Global option with --resolve applies when toggled and does not affect URL parsing.",
+      "preconditions": [
+        "Add global option label \"Bypass RP\" argsText \"--resolve 'example.com:80:192.0.2.10'\".",
+        "Request URL set to https://blogs.mulesoft.ca/"
+      ],
+      "steps": [
+        "Enable the Bypass RP checkbox.",
+        "Edit the command textarea host from .com to .ca and verify builder fields.",
+        "Run the request."
+      ],
+      "expected": [
+        "Command preview shows curl ... --resolve 'example.com:80:192.0.2.10' https://blogs.mulesoft.ca/ without overwriting the URL field.",
+        "Changing command text preserves URL input and global option value separately.",
+        "Run executes with both the resolve flag and the URL host from the builder."
+      ],
+      "visualChecks": [
+        "Checkbox shows active state when enabled and inactive when disabled.",
+        "No duplicate --resolve entries appear."
+      ]
+    },
+    {
+      "id": "cookie-header-merge",
+      "type": "function",
+      "area": "Cookies",
+      "description": "Cookie helper builds a single Cookie header while preserving user-provided headers.",
+      "preconditions": [
+        "Add two cookies (one disabled, one enabled) with path/domain/samesite/secure/httpOnly variations.",
+        "Add a manual Header named Cookie: legacy=keep"
+      ],
+      "steps": [
+        "Toggle cookies on/off and observe command preview.",
+        "Run with both cookies enabled."
+      ],
+      "expected": [
+        "Preview includes only enabled cookies in a single Cookie header; legacy header is not duplicated or removed.",
+        "Disabled cookies are omitted without deleting the manual header.",
+        "Run sends combined Cookie header with correct attributes order and separators."
+      ],
+      "visualChecks": [
+        "Cookie rows wrap without overlap; datalist suggestions remain accessible.",
+        "Cookie header preview in command text updates immediately on toggle."
+      ]
+    },
+    {
+      "id": "body-mode-switching",
+      "type": "feature",
+      "area": "Body editor",
+      "description": "Switching between JSON, raw, and form body modes preserves content per mode and updates curl flags correctly.",
+      "preconditions": [
+        "Method POST; JSON body contains structured payload; form mode has two fields (one disabled)."
+      ],
+      "steps": [
+        "Enter JSON, switch to form, add fields, then switch back to JSON and to raw.",
+        "Run in each mode."
+      ],
+      "expected": [
+        "Each mode retains its last state (JSON text, form fields) when revisited.",
+        "curl command uses -d/--data for JSON/raw and -F for form with only enabled fields.",
+        "Content-Type header is not auto-changed unexpectedly."
+      ],
+      "visualChecks": [
+        "Textarea sizing stays consistent when switching modes.",
+        "Form table scrolls if long without breaking alignment."
+      ]
+    },
+    {
+      "id": "jq-grep-chain-with-errors",
+      "type": "function",
+      "area": "Post-processing",
+      "description": "jq and grep run sequentially, surfaces stderr and exit codes correctly when jq fails.",
+      "preconditions": [
+        "Set jq expr to invalid syntax (e.g., .data[), grep pattern foo."
+      ],
+      "steps": [
+        "Run request producing valid JSON.",
+        "Inspect chain tab and stderr details."
+      ],
+      "expected": [
+        "curl runs and captures output; jq fails with stderr shown and final stage indicates jq.",
+        "grep is skipped after jq failure; no stale grep output shown.",
+        "Exit code in footer reflects the failing stage."
+      ],
+      "visualChecks": [
+        "Result text clearly distinguishes stdout/stderr content.",
+        "Status messages update per stage without overlap."
+      ]
+    },
+    {
+      "id": "raw-tab-rerun-separation",
+      "type": "feature",
+      "area": "Result panel",
+      "description": "Raw tab reruns curl only and does not reuse jq/grep output; respects variable resolution.",
+      "preconditions": [
+        "Request contains variables resolved by prior Run.",
+        "jq and grep are set with expressions and patterns."
+      ],
+      "steps": [
+        "Run via Run button (chain).",
+        "Switch to raw tab.",
+        "Edit jq/grep inputs and switch between tabs."
+      ],
+      "expected": [
+        "Raw tab reruns curl when selected if request id changed since last raw run.",
+        "Raw output ignores jq/grep and uses resolved variables without prompting again.",
+        "Changing jq/grep does not affect raw output until next chain run."
+      ],
+      "visualChecks": [
+        "Tab state highlights correctly; loading indicator appears during raw rerun.",
+        "Raw tab footer shows curl stage and byte count."
+      ]
+    },
+    {
+      "id": "kill-during-curl-only",
+      "type": "feature",
+      "area": "Process control",
+      "description": "Kill button is enabled only while curl is active and cancels the process.",
+      "preconditions": [
+        "Run a long-running curl (e.g., slow endpoint or large download)."
+      ],
+      "steps": [
+        "Start run, observe Kill enabled.",
+        "Click Kill during curl.",
+        "Observe status and output."
+      ],
+      "expected": [
+        "Kill enables immediately after run starts and disables as soon as curl completes or is killed.",
+        "Process is terminated; status reflects kill request and no further jq/grep steps run.",
+        "Active process id clears in UI."
+      ],
+      "visualChecks": [
+        "Kill button style changes between enabled/disabled states.",
+        "No flicker or double-enabling when switching tabs."
+      ]
+    },
+    {
+      "id": "history-restore-all-fields",
+      "type": "function",
+      "area": "History",
+      "description": "History entry restores all request fields including cookies, global options, and filters, and refreshes previews.",
+      "preconditions": [
+        "Create a run with custom headers, cookies, body, global options enabled, jq expr, multiple grep patterns, and raw tab previously opened."
+      ],
+      "steps": [
+        "Click the history entry.",
+        "Switch between chain/raw tabs.",
+        "Inspect command preview and builder fields."
+      ],
+      "expected": [
+        "Builder reflects stored values and toggles; cookies list restored with enabled states.",
+        "Command preview matches the restored request; no stale command text from prior selection.",
+        "Raw tab reruns curl for the restored request instead of showing prior raw output."
+      ],
+      "visualChecks": [
+        "History list selection highlights briefly on click.",
+        "No duplicate rows or missing separators in cookies."
+      ]
+    },
+    {
+      "id": "template-vars-prefill-and-run",
+      "type": "feature",
+      "area": "Templates",
+      "description": "Template variables prefill defaults, run populates builder and executes once resolved.",
+      "preconditions": [
+        "Template with variablesMeta default values, headers/body placeholders, and a cookie."
+      ],
+      "steps": [
+        "Double-click template to open modal.",
+        "Accept defaults and Run.",
+        "Inspect builder and command preview; re-open modal to ensure defaults persist."
+      ],
+      "expected": [
+        "Modal shows default values per variablesMeta; run substitutes and executes.",
+        "Builder fields now show concrete values and command preview has no placeholders.",
+        "Re-opening modal shows defaults again, not last-run values."
+      ],
+      "visualChecks": [
+        "Modal width fits labels; buttons aligned right.",
+        "Command textarea scrolls if long without clipping."
+      ]
+    },
+    {
+      "id": "shortcut-run-request",
+      "type": "function",
+      "area": "Shortcuts",
+      "description": "Run shortcut triggers handleRun and respects custom shortcut config.",
+      "preconditions": [
+        "Set config shortcuts.runRequest to Ctrl+Alt+R in config.json or via preload fallback.",
+        "Ensure focus is inside URL input."
+      ],
+      "steps": [
+        "Press Ctrl+Alt+R.",
+        "Observe status and active process id."
+      ],
+      "expected": [
+        "Run starts even when focus is in a field; status updates to Running curl...",
+        "Kill enables during curl; final output appears in chain tab."
+      ],
+      "visualChecks": [
+        "No duplicate execution when holding keys briefly.",
+        "Shortcut hint in status or config is accurate."
+      ]
+    },
+    {
+      "id": "fallback-config-renderer",
+      "type": "feature",
+      "area": "Resilience",
+      "description": "Renderer fallback config works when preload bridge is unavailable.",
+      "preconditions": [
+        "Simulate missing window.shell (e.g., load renderer in standalone Vite)."
+      ],
+      "steps": [
+        "Open renderer in browser without Electron.",
+        "Interact with builder fields."
+      ],
+      "expected": [
+        "App renders with fallback config; no crashes when saving or running.",
+        "Status shows Preload bridge unavailable; Run button is disabled or no-op without errors."
+      ],
+      "visualChecks": [
+        "UI still lays out correctly without Electron shell.",
+        "Toolbar shows status message without overflow."
+      ]
+    },
+    {
+      "id": "command-parsing-roundtrip",
+      "type": "function",
+      "area": "Command textarea",
+      "description": "Editing command textarea parses back into builder without losing headers, body, cookies, or global options.",
+      "preconditions": [
+        "Build a complex request with multiple headers, cookies, body, jq, grep, and a global option enabled."
+      ],
+      "steps": [
+        "Manually edit command textarea to change method and URL.",
+        "Observe builder updates; then switch fields back in UI.",
+        "Ensure command preview realigns after edits stop."
+      ],
+      "expected": [
+        "Method/URL update from parsed command; headers/body/cookies remain intact.",
+        "Global option is preserved and not duplicated.",
+        "After edits stop, command preview regenerates from current state without stale fragments."
+      ],
+      "visualChecks": [
+        "Flag tooltip still works when selecting curl flags after edits.",
+        "No flicker when commandDirty flips back to preview."
+      ]
+    },
+    {
+      "id": "timeout-per-request",
+      "type": "feature",
+      "area": "Curl options",
+      "description": "Per-request timeout overrides default and is reflected in command and execution.",
+      "preconditions": [
+        "Default timeout is 0; set request curlOptions.timeoutMs to 2000 via UI."
+      ],
+      "steps": [
+        "Run against an endpoint that would exceed 2s.",
+        "Observe exit and status.",
+        "Remove timeout and rerun."
+      ],
+      "expected": [
+        "Command preview shows --max-time 2 (or equivalent) when timeout set.",
+        "Run aborts near 2s with timeout exit code; removing timeout allows longer run.",
+        "History captures timeout setting."
+      ],
+      "visualChecks": [
+        "Timeout input (if exposed) displays value clearly; no overlap with labels.",
+        "Status mentions timeout when triggered."
+      ]
+    },
+    {
+      "id": "rg-flags-and-or-patterns",
+      "type": "function",
+      "area": "Grep/rg",
+      "description": "Multiple OR patterns with rg plus extra flags generate correct command and output.",
+      "preconditions": [
+        "Enable rg; add three patterns, enable -i and -F, extra flag --no-heading."
+      ],
+      "steps": [
+        "Run against JSON output with matching and non-matching lines.",
+        "Inspect final output and command preview."
+      ],
+      "expected": [
+        "Preview shows rg -i -F --no-heading -e pattern1 -e pattern2 -e pattern3.",
+        "Output includes only matching lines respecting fixed strings and case-insensitive options.",
+        "Removing one pattern updates preview immediately."
+      ],
+      "visualChecks": [
+        "Pattern rows align; removing middle row reorders gracefully.",
+        "Extra flags input truncates/scrolls when long."
+      ]
+    },
+    {
+      "id": "zoom-and-layout-resilience",
+      "type": "visual",
+      "area": "UI",
+      "description": "Global zoom shortcuts and narrow window preserve layout readability.",
+      "preconditions": [
+        "Open app window; resize to narrow width."
+      ],
+      "steps": [
+        "Use Ctrl++ then Ctrl+- then Ctrl+0 to zoom in/out/reset.",
+        "Scroll through cookies, headers, and response panels."
+      ],
+      "expected": [
+        "UI scales without overlapping labels or clipped buttons; reset returns to default scale.",
+        "Scrollable areas remain usable at different zoom levels."
+      ],
+      "visualChecks": [
+        "Tooltip and modal positions stay within viewport after zoom changes.",
+        "No horizontal scrollbar appears in toolbar under narrow width with zoom applied."
+      ]
+    }
+  ]
+}

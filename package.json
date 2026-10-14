@@ -1,0 +1,61 @@
+{
+  "name": "curl-builder",
+  "version": "0.1.0",
+  "description": "curl-builder: curl/jq/grep-first API console (Electron + React)",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:main\" \"npm:dev:preload\" \"npm:dev:renderer\" \"npm:electron\"",
+    "dev:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --external:electron --outdir=dist/main --sourcemap --watch",
+    "dev:preload": "esbuild src/preload/preload.ts --bundle --platform=node --format=cjs --external:electron --outdir=dist/preload --sourcemap --watch",
+    "dev:renderer": "vite dev --config vite.config.ts",
+    "electron": "wait-on dist/main/main.js dist/preload/preload.js http://127.0.0.1:5173 && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .",
+    "build": "npm run build:clean && npm run build:main && npm run build:preload && npm run build:renderer",
+    "build:clean": "rimraf dist",
+    "build:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --external:electron --outdir=dist/main --sourcemap",
+    "build:preload": "esbuild src/preload/preload.ts --bundle --platform=node --format=cjs --external:electron --outdir=dist/preload --sourcemap",
+    "build:renderer": "vite build --config vite.config.ts",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.renderer.json",
+    "scenarios": "node tools/run-scenarios.cjs",
+    "test": "vitest run --config vitest.config.ts",
+    "test:desktop": "node tools/desktop-check.cjs",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tloureiro/curl-builder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tloureiro/curl-builder/issues"
+  },
+  "homepage": "https://github.com/tloureiro/curl-builder#readme",
+  "dependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^25.0.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^10.0.6",
+    "electron": "^44.7.2",
+    "esbuild": "^0.27.1",
+    "jsdom": "^26.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7",
+    "vitest": "^4.1.11",
+    "wait-on": "^9.0.3"
+  },
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  }
+}

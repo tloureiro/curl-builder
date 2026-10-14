@@ -1,0 +1,71 @@
+{
+  "title": "curl-builder sample test suite",
+  "scenarios": [
+    {
+      "id": "builder-new-clears",
+      "type": "feature",
+      "area": "Request builder",
+      "description": "New button resets builder and command preview.",
+      "preconditions": [
+        "App running in dev or packaged mode.",
+        "Fill method/url/headers/body/grep/jq/cookies and edit command textarea."
+      ],
+      "steps": [
+        "Click New in the toolbar.",
+        "Inspect all form fields and the command textarea."
+      ],
+      "expected": [
+        "Request fields reset to defaults (GET https://httpbin.org/get, one blank header, empty body).",
+        "Cookies reset to a single empty cookie row.",
+        "jq/grep fields cleared; command preview/input cleared and mirrors defaults."
+      ],
+      "visualChecks": [
+        "Command textarea shows default command without stale tokens.",
+        "No residual highlighting or stale toggles remain enabled."
+      ]
+    },
+    {
+      "id": "history-loads-state",
+      "type": "function",
+      "area": "History",
+      "description": "Loading a history entry populates builder and command preview.",
+      "preconditions": [
+        "Run a request with custom headers, body, jq expression, grep patterns, and cookies to create a history entry."
+      ],
+      "steps": [
+        "Click the history entry.",
+        "Review all builder fields and command preview."
+      ],
+      "expected": [
+        "All fields (method/url/headers/body/cookies/global options/jq/grep) reflect the saved entry.",
+        "Command preview matches the reconstructed request with cookies and filters.",
+        "Raw tab reruns curl for the selected history item when opened."
+      ],
+      "visualChecks": [
+        "Checkboxes and toggles reflect stored on/off state.",
+        "Command textarea updates immediately without mixing with prior state."
+      ]
+    },
+    {
+      "id": "template-with-vars",
+      "type": "visual",
+      "area": "Templates",
+      "description": "Running a template with variables prompts, applies values, and updates command preview.",
+      "preconditions": [
+        "Create a template containing {{VAR}} placeholders in URL/header/body and at least one cookie."
+      ],
+      "steps": [
+        "Double-click the template.",
+        "Fill the variable modal with sample values and run."
+      ],
+      "expected": [
+        "Builder fields populate with the concrete values; command preview renders substituted values.",
+        "Variable modal closes and status shows the run stages (curl/jq/grep)."
+      ],
+      "visualChecks": [
+        "Modal labels and inputs align; no clipping at common window sizes.",
+        "Command textarea shows substituted values without leftover {{VAR}} tokens."
+      ]
+    }
+  ]
+}
