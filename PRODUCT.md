@@ -71,11 +71,13 @@ empty pipelines, cookie construction, local-data behavior, and recoverable save 
 The October 14 security pass enables sandbox/CSP/sender/payload checks, scopes CLI
 capabilities, replaces saved files atomically and updates the locked dependencies
 (zero npm advisories at that date). See [security](docs/SECURITY.md) for limits.
-This source edition omits legacy runtime config and Git history and uses synthetic
-routing examples. Before publication/distribution, resolve attribution and verify
-the initial commit, then assess any additional platform/distribution requirements. Accessibility,
-keyboard flow, missing-tool errors, and empty/loading/failure states need a focused
-manual review. These are priorities, not promised releases or completion dates.
+This source edition excludes legacy runtime config and uses synthetic routing
+examples and clean source history. ISC and React runtime notices are included.
+A focused macOS keyboard/recovery pass checks native dialogs, focus containment/
+restoration, Escape/Enter, template/history activation, save/retry, missing curl,
+and existing startup/empty/filter failures. It does not establish screen-reader,
+other-platform or external-user usability. Any packaged distribution needs its
+own platform/license review. These are limits, not promised releases or dates.
 
 Success checks should remain concrete: can a user explain a newly explored flag,
 reuse a template with different values, and predict exactly when a request will

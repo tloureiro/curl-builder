@@ -363,3 +363,30 @@ button.danger {
   text-align: left;
   border-radius: 0;
 }
+
+/* Modal behavior comes from Chromium's dialog implementation. */
+.modal {
+  color: var(--text);
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.modal:not([open]) { display: none; }
+.modal::backdrop { background: rgba(0, 0, 0, 0.6); }
+.modal-form { display: flex; flex-direction: column; gap: 8px; }
+
+button.list-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+button.list-item:hover { background: var(--panel-2); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { cursor: default; opacity: 0.55; }
+
+.save-error { padding: 8px 12px; color: var(--text); border: 1px solid var(--danger); }

@@ -45,7 +45,8 @@ updates, not an instruction to defer security fixes.
 
 Review proposed changes and run the meaningful checks before merging. The October 14 update removed unused packages and refreshed Electron/tooling and
 compatible transitive dependencies. The locked tree returned zero known npm
-advisories that day; future findings still require manual triage. Remote configuration results have not been verified;
+advisories that day; future findings still require manual triage. The owner reports Checks passed for 6b41de4; later local changes and Dependabot
+execution still need their own verification;
 there is no configured automatic merge or package publication.
 
 ## Version and release convention

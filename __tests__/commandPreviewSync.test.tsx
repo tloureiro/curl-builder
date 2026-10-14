@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../src/renderer/App";
 
@@ -474,5 +474,101 @@ describe("request privacy", () => {
     expect(command.value).toContain("--no-include");
     expect(command.value).not.toMatch(/ -i(?: |$)/);
     expect(command.value).toContain("| jq");
+  });
+});
+
+
+describe("keyboard request and template interactions", () => {
+  it("cancels request variables without executing, then submits them once with Enter", async () => {
+    const user = userEvent.setup();
+    const shell = mockShell();
+    (window as any).shell = shell;
+    render(<App />);
+    await screen.findByRole("button", { name: /Example routing/i });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.com/{{ITEM}}" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run", exact: true }));
+    fireEvent(screen.getByRole("dialog", { name: "Provide variable values" }), new Event("cancel", { cancelable: true }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(shell.runCurl).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Run", exact: true }));
+    const dialog = screen.getByRole("dialog", { name: "Provide variable values" });
+    await user.type(within(dialog).getByLabelText("ITEM"), "keyboard{Enter}");
+    await waitFor(() => expect(shell.runCurl).toHaveBeenCalledTimes(1));
+    expect(shell.runCurl.mock.calls[0][0].request.url).toBe("https://example.com/keyboard");
+  });
+
+  it("submits the selected saved template with Enter instead of the edited request", async () => {
+    const user = userEvent.setup();
+    const shell = mockShell();
+    shell.loadTemplates.mockResolvedValue([{
+      id: "keyboard-template", name: "Keyboard template", method: "POST",
+      urlTemplate: "https://example.com/{{ITEM}}", headersTemplate: [], bodyTemplate: { mode: "none", formFields: [], rawText: "" },
+    }] as any);
+    (window as any).shell = shell;
+    render(<App />);
+    const template = await screen.findByRole("button", { name: /Keyboard template POST/i });
+    template.focus();
+    await user.keyboard("{Enter}");
+    const dialog = screen.getByRole("dialog", { name: "Fill template vars" });
+    await user.type(within(dialog).getByLabelText("ITEM"), "saved{Enter}");
+    await waitFor(() => expect(shell.runCurl).toHaveBeenCalledTimes(1));
+    expect(shell.runCurl.mock.calls[0][0].request).toMatchObject({ method: "POST", url: "https://example.com/saved" });
+  });
+
+  it("keeps a pending save open when dismissal is requested", async () => {
+    let resolveSave!: () => void;
+    const shell = mockShell();
+    shell.saveTemplates.mockImplementation(() => new Promise<void>((resolve) => { resolveSave = resolve; }));
+    (window as any).shell = shell;
+    render(<App />);
+    await screen.findByRole("button", { name: /Example routing/i });
+    fireEvent.click(screen.getByRole("button", { name: "Save as template" }));
+    fireEvent.change(screen.getByLabelText("Template name"), { target: { value: "Pending" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save", exact: true }));
+    const dialog = screen.getByRole("dialog", { name: "Save template" });
+    fireEvent(dialog, new Event("cancel", { cancelable: true }));
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+    resolveSave();
+    await screen.findByText("Template saved");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("loads history by keyboard without sending another request", async () => {
+    const user = userEvent.setup();
+    const shell = mockShell();
+    (window as any).shell = shell;
+    render(<App />);
+    await screen.findByRole("button", { name: /Example routing/i });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.com/history" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run", exact: true }));
+    const history = await screen.findByRole("button", { name: /GET.*example.com\/history/i });
+    fireEvent.change(screen.getByLabelText("URL"), { target: { value: "https://example.com/edited" } });
+    history.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByLabelText("URL")).toHaveValue("https://example.com/history");
+    expect(shell.runCurl).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe("settings save recovery", () => {
+  it("reports a failed settings save and retries the values kept in the window", async () => {
+    const shell = mockShell();
+    (window as any).shell = shell;
+    render(<App />);
+    await screen.findByRole("button", { name: /Example routing/i });
+    shell.saveWorkspaceConfig.mockRejectedValueOnce(new Error("synthetic settings failure"));
+    fireEvent.click(screen.getByRole("button", { name: "Global curl options" }));
+    const dialog = screen.getByRole("dialog", { name: "Global curl options" });
+    fireEvent.change(within(dialog).getByLabelText("Preset 1 label"), { target: { value: "Retryable preset" } });
+    const error = await within(dialog).findByRole("alert");
+    expect(error).toHaveTextContent("Settings could not be saved");
+    expect(within(dialog).getByLabelText("Preset 1 label")).toHaveValue("Retryable preset");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Retry settings save" }));
+    await waitFor(() => expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument());
+    expect(shell.saveWorkspaceConfig).toHaveBeenLastCalledWith(expect.objectContaining({
+      globalCurlOptions: expect.arrayContaining([expect.objectContaining({ label: "Retryable preset" })]),
+    }));
   });
 });

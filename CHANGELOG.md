@@ -7,6 +7,11 @@ The entries below describe local work awaiting a release. The package's current
 
 ### Changed
 
+- Use native modal dialogs for save/variables/presets with keyboard focus containment,
+  Escape cancellation and focus restoration; Enter submits name/variable forms.
+- Make session history keyboard accessible, label request controls and show focus.
+- Keep template/settings save failures visible and retryable with in-window edits.
+
 - Capture response headers separately so jq receives the body.
 - Reuse the same curl response in the raw tab; viewing it does not repeat a request.
 - Keep history in memory, without resolved prompt values, and place runtime files
@@ -43,9 +48,9 @@ The entries below describe local work awaiting a release. The package's current
 
 ### Known limits
 
-Broader UX review, publication privacy checks and packaged/cross-platform
-distribution remain open. Packaged artifacts need a distribution-specific
+Screen-reader/other-platform usability and packaged/cross-platform distribution
+remain unverified. Packaged artifacts need a distribution-specific
 third-party notice review. Runtime boundaries and dated
-dependency checks are documented in [security](docs/SECURITY.md). Remote CI/Dependabot
-results have not been verified. See
+dependency checks are documented in [security](docs/SECURITY.md). The owner reports Checks passed for 6b41de4; these pending changes have not run
+remotely. Dependabot execution remains unverified. See
 [product scope](PRODUCT.md) and [maintenance guidance](docs/MAINTENANCE.md).

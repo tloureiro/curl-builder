@@ -106,3 +106,13 @@ defaults suppress implicit config and limit protocols/globbing; internal capture
 adds header plumbing. Raw/form bodies use literal CLI options. Storage/logs use
 private temporary files and rename; validation failure leaves saved data untouched.
 No general schema, hook, release or security framework was introduced.
+
+## Keyboard and dialog behavior
+
+`Modal.tsx` wraps Chromium's native dialog: showModal makes the background inert,
+contains keyboard focus and restores the opener on close. The four existing
+popup flows share it; Enter submits only the active form and Escape cancels unless
+a template write is pending. History entries are buttons that load without running.
+Save failures preserve in-window edits and expose an actionable retry. Real
+Electron checks exercise native behavior; jsdom only stubs dialog methods for
+renderer state tests, so those tests do not prove browser modality.

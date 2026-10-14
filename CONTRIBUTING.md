@@ -43,7 +43,8 @@ application suites unless a behavior or setup claim changed.
 
 The local baseline was verified on macOS with Node 24.14.1 on 2026-10-14. The
 [CI workflow](.github/workflows/checks.yml) prepares the same non-GUI checks on
-Ubuntu/Node 24, but its remote result has not been verified. It does not establish Linux
+Ubuntu/Node 24. The owner reports Checks passed for commit 6b41de4;
+new local changes still need their own remote result. It does not establish Linux
 desktop support. There is no configured lint command; do not claim one passed.
 
 ## Maintenance conventions

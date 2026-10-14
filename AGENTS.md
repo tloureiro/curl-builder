@@ -25,8 +25,8 @@ execution, or template reuse. Avoid speculative features and broad rewrites.
   not be repeated unless behavior/setup changed. No lint script exists.
 - Add regressions for meaningful bugs. Use synthetic local fixtures; never a real
   account, customer endpoint, credential, or saved request collection.
-- Record actual check results and limits. CI is configured but unverified remotely;
-  do not add passing badges or claim cross-platform support from configuration alone.
+- Record actual check results and limits. Owner reports Checks passed for 6b41de4;
+  verify each later commit separately. No passing badge or platform claim from config alone.
 
 ## Code boundaries
 
@@ -60,6 +60,10 @@ execution, or template reuse. Avoid speculative features and broad rewrites.
   curl options, cookies and filters, omitting execution-time variable values. Execute
   the selected template snapshot directly rather than scheduling a stale handler. Placeholders
   trigger value prompting, and active-request values can prefill later runs.
+- Use native modal dialogs so focus/background restrictions and restoration survive.
+  Escape cancels, Enter submits the active form; global Run shortcut stays inactive
+  inside dialogs. History keyboard activation only loads; it never executes.
+- Template/config save errors remain visible and retryable without discarding edits.
 - Body controls appear for POST/PUT/PATCH. Zoom shortcuts are Ctrl/Cmd +, -, 0.
 - The renderer's fallback configuration still renders when preload is unavailable;
   it does not establish a working execution bridge.
@@ -86,7 +90,7 @@ private writes. A new supported CLI option needs a concrete workflow and a revie
 of file/network/process effects; do not weaken a guard just to accept a pasted command.
 Subprocess environments omit secrets/proxies/HOME; data/output/filter-time limits
 are intentional. Main/system binaries remain privileged and trusted. Current/history
-publication content and license/source attribution still need a deliberate review.
+publication content and license/source attribution require deliberate review when changed.
 Do not claim an exhaustive security audit or all-platform hardening.
 
 ## Lightweight automation

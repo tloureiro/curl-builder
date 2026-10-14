@@ -19,11 +19,12 @@ without a shell; a preload bridge connects it to the renderer.
 - [Maintenance](docs/MAINTENANCE.md): shared checks, optional hooks, dependencies, and versioning.
 - [Changelog](CHANGELOG.md): actual pending changes and release notes.
 
-Local typecheck, 70 tests, build, security/desktop checks passed on
+Local typecheck, 75 tests, build, security/desktop checks passed on
 macOS/Node 24.14.1 on 2026-10-14, including clean development startup.
 The desktop check covers recognized flag descriptions, template save/disk reload,
 variable prompting, replay after a full app-process restart, and recovery from
-unreadable synthetic config/template files. GitHub CI is configured; its remote result has not been verified.
+unreadable synthetic config/template files. The owner reports GitHub Checks passed for commit 6b41de4; the pending
+usability changes have not yet run remotely.
 This is a local prototype; see the limits below.
 
 ## Prerequisites
@@ -95,6 +96,18 @@ entered Cookie header is preserved when the helper has no enabled pairs.
 
 The Kill button stops active curl. Filters default to 30 seconds with a 60-second
 ceiling; positive configured timeouts can make that shorter. Ctrl/Cmd +, -, and 0 control zoom.
+
+## Keyboard use
+
+Use Tab/Shift+Tab to move through controls; focus is visibly outlined. Template
+and history entries support Enter/Space. Loading history edits the builder without
+sending another request. Ctrl/Cmd+Enter runs the current request outside dialogs.
+
+Save, request-variable, template-variable and preset dialogs keep the background
+inactive. Escape cancels/closes and returns focus to the opener; Enter submits the
+name or variable form. A save in progress stays open until it finishes. Template
+save errors stay in the dialog with the entered name intact. Settings write errors
+explain that edits remain in this window and offer **Retry settings save**.
 
 ## Local data
 

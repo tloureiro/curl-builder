@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Modal } from "./Modal";
 import {
   BodyFormField,
   ConcreteRequest,
@@ -283,6 +284,8 @@ function App() {
   const runLogRef = useRef<string[]>([]);
   const [templateName, setTemplateName] = useState<string | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [templateSaveError, setTemplateSaveError] = useState("");
+  const [configSaveError, setConfigSaveError] = useState("");
   const [promptTemplate, setPromptTemplate] = useState<RequestTemplate | null>(null);
   const [promptValues, setPromptValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(false);
@@ -449,7 +452,10 @@ function App() {
   const persistConfig = (next: WorkspaceConfig) => {
     setConfig(next);
     if (hasShell) {
-      void window.shell.saveWorkspaceConfig(next);
+      setConfigSaveError("");
+      void window.shell.saveWorkspaceConfig(next).catch(() => {
+        setConfigSaveError("Settings could not be saved. Changes remain in this window. Check the data directory and retry.");
+      });
     }
   };
 
@@ -1055,6 +1061,7 @@ function App() {
     const name = templateName?.trim();
     if (!name || savingTemplate || setupState !== "ready") return;
     setSavingTemplate(true);
+    setTemplateSaveError("");
     const tpl = templateFromRequest(currentRequest(), name);
     const next = [...templates, tpl];
     try {
@@ -1063,7 +1070,8 @@ function App() {
       setTemplateName(null);
       setStatus("Template saved");
     } catch {
-      setStatus("Could not save template. Check the data directory and try again.");
+      setStatus("Template not saved");
+      setTemplateSaveError("Could not save template. Check the data directory and try again.");
     } finally {
       setSavingTemplate(false);
     }
@@ -1091,7 +1099,7 @@ function App() {
         <button onClick={handleKill} className="ghost" disabled={!activeProcessId}>
           Kill
         </button>
-        <button onClick={() => setTemplateName("")} className="ghost" disabled={setupState !== "ready"}>
+        <button onClick={() => { setTemplateSaveError(""); setTemplateName(""); }} className="ghost" disabled={setupState !== "ready"}>
           Save as template
         </button>
         <button className="ghost" disabled={setupState !== "ready"} onClick={() => setGlobalOptionsOpen(true)}>
@@ -1101,6 +1109,11 @@ function App() {
         {setupState === "failed" && <button className="ghost" onClick={() => setSetupAttempt((value) => value + 1)}>Retry setup</button>}
       </div>
 
+      {configSaveError && !globalOptionsOpen && (
+        <div className="save-error" role="alert">{configSaveError}
+          <button className="ghost" onClick={() => persistConfig(config)}>Retry settings save</button>
+        </div>
+      )}
       <div className="main-layout">
         <div className="panel">
           <div className="section-title">Templates</div>
@@ -1118,10 +1131,10 @@ function App() {
           <div className="list">
             {history.length === 0 && <div className="list-item">No runs yet</div>}
             {history.map((h) => (
-              <div key={h.id} className="list-item" onClick={() => loadHistoryEntry(h)}>
+              <button key={h.id} className="list-item history-item" disabled={loading} onClick={() => loadHistoryEntry(h)}>
                 <div>{h.request.method} · {h.request.url}</div>
                 <div className="small">{new Date(h.createdAt).toLocaleTimeString()}</div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -1129,8 +1142,8 @@ function App() {
         <div className="panel request-builder">
           <div className="section-title">Request</div>
           <div className="field-row">
-            <label>Method</label>
-            <select
+            <label htmlFor="request-method">Method</label>
+            <select id="request-method"
               value={request.method}
               onChange={(e) => setRequestField({ method: e.target.value as HttpMethod })}
             >
@@ -1140,8 +1153,8 @@ function App() {
             </select>
           </div>
           <div className="field-row">
-            <label>URL</label>
-            <input
+            <label htmlFor="request-url">URL</label>
+            <input id="request-url"
               value={request.url}
               onChange={(e) => setRequestField({ url: e.target.value })}
               placeholder="https://"
@@ -1165,11 +1178,12 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {request.headers.map((h) => (
+              {request.headers.map((h, index) => (
                 <tr key={h.id}>
                   <td>
                     <input
                       type="checkbox"
+                      aria-label={`Enable header ${index + 1}`}
                       checked={h.enabled}
                       onChange={(e) => updateHeader(h.id, { enabled: e.target.checked })}
                     />
@@ -1189,7 +1203,7 @@ function App() {
                     />
                   </td>
                   <td>
-                    <button className="ghost" onClick={() => removeHeader(h.id)}>×</button>
+                    <button className="ghost" aria-label={`Remove header ${index + 1}`} onClick={() => removeHeader(h.id)}>×</button>
                   </td>
                 </tr>
               ))}
@@ -1201,8 +1215,8 @@ function App() {
           {["POST", "PUT", "PATCH"].includes(request.method) && (
             <>
               <div className="field-row">
-                <label>Mode</label>
-                <select
+                <label htmlFor="request-body-mode">Mode</label>
+                <select id="request-body-mode"
                   value={request.body.mode}
                   onChange={(e) => setRequest((prev) => ({
                     ...prev,
@@ -1218,6 +1232,7 @@ function App() {
 
               {(request.body.mode === "json" || request.body.mode === "raw") && (
                 <textarea
+                  aria-label="Request body"
                   className="mono"
                   value={request.body.rawText}
                   onChange={(e) => setRequest((prev) => ({
@@ -1246,29 +1261,32 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {request.body.formFields.map((f) => (
+                      {request.body.formFields.map((f, index) => (
                         <tr key={f.id}>
                           <td>
                             <input
                               type="checkbox"
+                              aria-label={`Enable form field ${index + 1}`}
                               checked={f.enabled}
                               onChange={(e) => updateFormField(f.id, { enabled: e.target.checked })}
                             />
                           </td>
                           <td>
                             <input
+                              aria-label={`Form field name ${index + 1}`}
                               value={f.name}
                               onChange={(e) => updateFormField(f.id, { name: e.target.value })}
                             />
                           </td>
                           <td>
                             <input
+                              aria-label={`Form field value ${index + 1}`}
                               value={f.value}
                               onChange={(e) => updateFormField(f.id, { value: e.target.value })}
                             />
                           </td>
                           <td>
-                            <button className="ghost" onClick={() => removeFormField(f.id)}>×</button>
+                            <button className="ghost" aria-label={`Remove form field ${index + 1}`} onClick={() => removeFormField(f.id)}>×</button>
                           </td>
                         </tr>
                       ))}
@@ -1287,6 +1305,7 @@ function App() {
                 <div className="flex-row" style={{ gap: "6px" }}>
                   <input
                     type="checkbox"
+                    aria-label={`Enable cookie ${idx + 1}`}
                     checked={c.enabled}
                     onChange={(e) => updateCookie(c.id, { enabled: e.target.checked })}
                     title="Enabled"
@@ -1294,28 +1313,33 @@ function App() {
                   <input
                     list="cookie-names"
                     placeholder="name"
+                    aria-label={`Cookie name ${idx + 1}`}
                     value={c.name}
                     onChange={(e) => updateCookie(c.id, { name: e.target.value })}
                   />
                   <input
                     placeholder="value"
+                    aria-label={`Cookie value ${idx + 1}`}
                     value={c.value}
                     onChange={(e) => updateCookie(c.id, { value: e.target.value })}
                   />
-                  <button className="ghost" onClick={() => removeCookie(c.id)} type="button">×</button>
+                  <button className="ghost" aria-label={`Remove cookie ${idx + 1}`} onClick={() => removeCookie(c.id)} type="button">×</button>
                 </div>
                 <div className="flex-row" style={{ gap: "6px", flexWrap: "wrap" }}>
                   <input
                     placeholder="Path"
+                    aria-label={`Cookie path ${idx + 1}`}
                     value={c.path}
                     onChange={(e) => updateCookie(c.id, { path: e.target.value })}
                   />
                   <input
                     placeholder="Domain"
+                    aria-label={`Cookie domain ${idx + 1}`}
                     value={c.domain}
                     onChange={(e) => updateCookie(c.id, { domain: e.target.value })}
                   />
                   <select
+                    aria-label={`Cookie SameSite ${idx + 1}`}
                     value={c.sameSite || ""}
                     onChange={(e) => updateCookie(c.id, { sameSite: e.target.value as any })}
                   >
@@ -1391,6 +1415,7 @@ function App() {
           <div className="flex-row" style={{ gap: "6px", flexWrap: "wrap" }}>
             <button
               className={`ghost ${!grepUseRg ? "active" : ""}`}
+              aria-pressed={!grepUseRg}
               onClick={() => setGrepUseRg(false)}
               type="button"
             >
@@ -1398,6 +1423,7 @@ function App() {
             </button>
             <button
               className={`ghost ${grepUseRg ? "active" : ""}`}
+              aria-pressed={grepUseRg}
               onClick={() => setGrepUseRg(true)}
               type="button"
             >
@@ -1406,15 +1432,15 @@ function App() {
           </div>
           {grepPatterns.map((p, idx) => (
             <div className="field-row" key={idx}>
-              <label>Pattern {idx + 1}</label>
+              <label htmlFor={`grep-pattern-${idx}`}>Pattern {idx + 1}</label>
               <div className="flex-row" style={{ gap: "6px", width: "100%" }}>
-                <input
+                <input id={`grep-pattern-${idx}`}
                   style={{ flex: 1 }}
                   value={p}
                   onChange={(e) => updateGrepPattern(idx, e.target.value)}
                   placeholder="pattern or regex"
                 />
-                <button className="ghost" onClick={() => removeGrepPattern(idx)} type="button">
+                <button className="ghost" aria-label={`Remove pattern ${idx + 1}`} onClick={() => removeGrepPattern(idx)} type="button">
                   ×
                 </button>
               </div>
@@ -1430,8 +1456,8 @@ function App() {
           </div>
 
           <div className="field-row">
-            <label>Extra flags</label>
-            <input
+            <label htmlFor="grep-extra-flags">Extra flags</label>
+            <input id="grep-extra-flags"
               value={grepExtraFlags}
               onChange={(e) => setGrepExtraFlags(e.target.value)}
               placeholder="e.g. --pcre2 --no-heading"
@@ -1439,8 +1465,8 @@ function App() {
           </div>
 
           <div className="field-row">
-            <label>jq expr</label>
-            <input value={jqExpr} onChange={(e) => setJqExpr(e.target.value)} placeholder=".data" />
+            <label htmlFor="jq-expression">jq expr</label>
+            <input id="jq-expression" value={jqExpr} onChange={(e) => setJqExpr(e.target.value)} placeholder=".data" />
           </div>
         </div>
 
@@ -1456,6 +1482,7 @@ function App() {
           </div>
           <div className="flex-row">
             <textarea
+              aria-label="Command preview"
               className="mono"
               value={commandInput}
               ref={commandInputRef}
@@ -1478,12 +1505,14 @@ function App() {
           <div className="tabs">
             <button
               className={`tab-button ${resultTab === "chain" ? "active" : ""}`}
+              aria-pressed={resultTab === "chain"}
               onClick={() => setResultTab("chain")}
             >
               chain
             </button>
             <button
               className={`tab-button ${resultTab === "raw" ? "active" : ""}`}
+              aria-pressed={resultTab === "raw"}
               onClick={() => setResultTab("raw")}
             >
               raw (curl only)
@@ -1513,56 +1542,34 @@ function App() {
       </div>
 
       {variablePrompt && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1400,
-          }}
-        >
-          <div className="panel" style={{ width: 420 }}>
-            <div className="section-title">Provide variable values</div>
-            {variablePrompt.names.length === 0 && <div>No variables detected.</div>}
+        <Modal titleId="request-vars-title" onCancel={() => setVariablePrompt(null)} width={420}>
+          <form className="modal-form" onSubmit={(event) => {
+            event.preventDefault();
+            const values = { ...variablePrompt.values };
+            setVariablePrompt(null);
+            void handleRun(values);
+          }}>
+            <div className="section-title" id="request-vars-title">Provide variable values</div>
             {variablePrompt.names.map((name) => (
               <div className="field-row" key={name}>
-                <label>{name}</label>
-                <input
-                  value={variablePrompt.values[name] ?? ""}
-                  onChange={(e) =>
-                    setVariablePrompt((prev) =>
-                      prev ? { ...prev, values: { ...prev.values, [name]: e.target.value } } : prev
-                    )
-                  }
-                />
+                <label htmlFor={`request-var-${name}`}>{name}</label>
+                <input id={`request-var-${name}`} value={variablePrompt.values[name] ?? ""}
+                  onChange={(event) => setVariablePrompt((prev) => prev
+                    ? { ...prev, values: { ...prev.values, [name]: event.target.value } } : prev)} />
               </div>
             ))}
             <div className="flex-row" style={{ justifyContent: "flex-end" }}>
-              <button className="ghost" onClick={() => setVariablePrompt(null)}>Cancel</button>
-              <button
-                onClick={() => {
-                  if (!variablePrompt) return;
-                  const values = { ...variablePrompt.values };
-                  setVariablePrompt(null);
-                  void handleRun(values);
-                }}
-              >
-                Run
-              </button>
+              <button type="button" className="ghost" onClick={() => setVariablePrompt(null)}>Cancel</button>
+              <button type="submit">Run</button>
             </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
       {templateName !== null && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <form className="panel" role="dialog" aria-modal="true" aria-labelledby="save-template-title"
-            style={{ width: 400 }} onSubmit={(event) => { event.preventDefault(); void saveTemplateFromCurrent(); }}
-            onKeyDown={(event) => { if (event.key === "Escape" && !savingTemplate) setTemplateName(null); }}>
+        <Modal titleId="save-template-title" onCancel={() => setTemplateName(null)} closeDisabled={savingTemplate}>
+          <form className="modal-form" onSubmit={(event) => { event.preventDefault(); void saveTemplateFromCurrent(); }}>
             <div className="section-title" id="save-template-title">Save template</div>
+            {templateSaveError && <div role="alert">{templateSaveError}</div>}
             <div className="field-row">
               <label htmlFor="template-name">Template name</label>
               <input id="template-name" autoFocus value={templateName} disabled={savingTemplate}
@@ -1573,89 +1580,60 @@ function App() {
               <button type="submit" disabled={!templateName.trim() || savingTemplate}>{savingTemplate ? "Saving…" : "Save"}</button>
             </div>
           </form>
-        </div>
+        </Modal>
       )}
       {promptTemplate && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div className="panel" role="dialog" aria-modal="true" aria-labelledby="template-vars-title" style={{ width: 400 }}>
+        <Modal titleId="template-vars-title" onCancel={() => setPromptTemplate(null)}>
+          <form className="modal-form" onSubmit={(event) => { event.preventDefault(); confirmTemplateRun(); }}>
             <div className="section-title" id="template-vars-title">Fill template vars</div>
             {Object.keys(promptValues).length === 0 && <div>No variables detected.</div>}
             {Object.entries(promptValues).map(([name, value]) => (
               <div className="field-row" key={name}>
                 <label htmlFor={`template-var-${name}`}>{name}</label>
-                <input
-                  id={`template-var-${name}`}
-                  value={value}
-                  onChange={(e) => setPromptValues((prev) => ({ ...prev, [name]: e.target.value }))}
-                />
+                <input id={`template-var-${name}`} value={value}
+                  onChange={(event) => setPromptValues((prev) => ({ ...prev, [name]: event.target.value }))} />
               </div>
             ))}
             <div className="flex-row" style={{ justifyContent: "flex-end" }}>
-              <button className="ghost" onClick={() => setPromptTemplate(null)}>Cancel</button>
-              <button onClick={confirmTemplateRun}>Run</button>
+              <button type="button" className="ghost" onClick={() => setPromptTemplate(null)}>Cancel</button>
+              <button type="submit">Run</button>
             </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
       {globalOptionsOpen && config && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1500,
-          }}
-        >
-          <div className="panel" style={{ width: 640, maxHeight: "85vh", overflow: "auto" }}>
-            <div className="section-title">Global curl options</div>
-            <div className="small">
-              Define snippets once and they will show up as checkboxes in every request. Mark them per request to append the args.
-            </div>
-            <div className="global-options-list">
-              {config.globalCurlOptions.length === 0 && (
-                <div className="small">No options yet. Add one to reuse curl args with a label.</div>
-              )}
-              {config.globalCurlOptions.map((opt) => (
-                <div key={opt.id} className="global-option-row">
-                  <div className="flex-row" style={{ gap: "6px", alignItems: "center" }}>
-                    <input
-                      value={opt.label}
-                      onChange={(e) => updateGlobalCurlOption(opt.id, { label: e.target.value })}
-                      placeholder="Label (e.g. Bypass RP)"
-                    />
-                    <button className="ghost" onClick={() => removeGlobalCurlOption(opt.id)} type="button">
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    className="mono"
-                    value={opt.argsText}
-                    onChange={(e) => updateGlobalCurlOption(opt.id, { argsText: e.target.value })}
-                    placeholder="curl args e.g. --resolve example.com:443:192.0.2.10"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex-row" style={{ justifyContent: "space-between" }}>
-              <button className="ghost" onClick={addGlobalCurlOption} type="button">
-                + Option
-              </button>
-              <button onClick={() => setGlobalOptionsOpen(false)}>Close</button>
-            </div>
+        <Modal titleId="global-options-title" onCancel={() => setGlobalOptionsOpen(false)} width={640}>
+          <div className="section-title" id="global-options-title">Global curl options</div>
+          {configSaveError && <div className="save-error" role="alert">{configSaveError}
+            <button className="ghost" onClick={() => persistConfig(config)}>Retry settings save</button>
+          </div>}
+          <div className="small">
+            Define snippets once and they will show up as checkboxes in every request. Mark them per request to append the args.
           </div>
-        </div>
+          <div className="global-options-list">
+            {config.globalCurlOptions.length === 0 && (
+              <div className="small">No options yet. Add one to reuse curl args with a label.</div>
+            )}
+            {config.globalCurlOptions.map((opt, index) => (
+              <div key={opt.id} className="global-option-row">
+                <div className="flex-row" style={{ gap: "6px", alignItems: "center" }}>
+                  <input aria-label={`Preset ${index + 1} label`} value={opt.label}
+                    onChange={(event) => updateGlobalCurlOption(opt.id, { label: event.target.value })}
+                    placeholder="Label (e.g. Example routing)" />
+                  <button className="ghost" aria-label={`Remove preset ${index + 1}`}
+                    onClick={() => removeGlobalCurlOption(opt.id)} type="button">×</button>
+                </div>
+                <input className="mono" aria-label={`Preset ${index + 1} curl arguments`} value={opt.argsText}
+                  onChange={(event) => updateGlobalCurlOption(opt.id, { argsText: event.target.value })}
+                  placeholder="curl args e.g. --resolve example.com:443:192.0.2.10" />
+              </div>
+            ))}
+          </div>
+          <div className="flex-row" style={{ justifyContent: "space-between" }}>
+            <button className="ghost" onClick={addGlobalCurlOption} type="button">+ Option</button>
+            <button onClick={() => setGlobalOptionsOpen(false)}>Close</button>
+          </div>
+        </Modal>
       )}
       {flagHint && (
         <div className="flag-tooltip" style={{ left: flagHint.x, top: flagHint.y }}>

@@ -33,6 +33,19 @@ function waitFor(win, expression) {
     } catch (e) { reject(e); }
   });
 }
+async function pressKey(win, keyCode, modifiers = []) {
+  if (keyCode === 'Enter') keyCode = 'Return';
+  win.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers });
+  if (keyCode === 'Return') win.webContents.sendInputEvent({ type: 'char', keyCode: '\r', modifiers });
+  win.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers });
+  await new Promise(resolve => setTimeout(resolve, 80));
+}
+async function activateToolbar(win, label) {
+  win.focus();
+  win.webContents.focus();
+  await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('.toolbar button')).find(button => button.textContent === ${JSON.stringify(label)}).focus()`);
+  await pressKey(win, 'Enter');
+}
   let primaryWindowSeen = false;
   app.on('browser-window-created', (_event, win) => {
     if (primaryWindowSeen) return;
@@ -84,17 +97,37 @@ function waitFor(win, expression) {
             assert(await foreign.webContents.executeJavaScript(`window.shell.runJq({ expr: '.', jsonInput: '{}' }).then(() => false, () => true)`));
           } finally { foreign.destroy(); }
         }
+        if (phase === 'workflow') {
+          console.log('USABILITY_CHECK: native dialogs, focus containment/restoration and Escape');
+          await activateToolbar(win, 'Save as template');
+          await waitFor(win, `document.activeElement?.id === 'template-name'`);
+          await pressKey(win, 'Tab', ['shift']);
+          assert(await win.webContents.executeJavaScript(`document.querySelector('dialog:modal').contains(document.activeElement)`));
+          await pressKey(win, 'Escape');
+          await waitFor(win, `!document.querySelector('dialog') && document.activeElement?.textContent === 'Save as template'`);
+          await activateToolbar(win, 'Global curl options');
+          await waitFor(win, `document.querySelector('[aria-labelledby="global-options-title"]').contains(document.activeElement)`);
+          await pressKey(win, 'Escape');
+          await waitFor(win, `!document.querySelector('dialog') && document.activeElement?.textContent === 'Global curl options'`);
+        }
         if (phase === 'restart') {
           await waitFor(win, `document.querySelector('.template-item')?.textContent.includes('Synthetic reusable request') && !document.querySelector('.template-item').disabled`);
           assert(await win.webContents.executeJavaScript(`document.querySelector('.list')?.textContent.includes('Synthetic reusable request') && Array.from(document.querySelectorAll('.list-item')).some(e => e.textContent === 'No runs yet')`));
-          await win.webContents.executeJavaScript(`document.querySelector('.template-item').click()`);
-          await waitFor(win, `!!document.querySelector('#template-var-ITEM')`);
+          await win.webContents.executeJavaScript(`document.querySelector('.template-item').focus()`);
+          await pressKey(win, 'Enter');
+          await waitFor(win, `document.activeElement?.id === 'template-var-ITEM'`);
+          await pressKey(win, 'Escape');
+          await waitFor(win, `!document.querySelector('dialog') && document.activeElement?.classList.contains('template-item')`);
+          await pressKey(win, 'Enter');
+          await waitFor(win, `document.activeElement?.id === 'template-var-ITEM'`);
+          await pressKey(win, 'Enter', ['meta']);
+          assert(await win.webContents.executeJavaScript(`!!document.querySelector('dialog:modal')`));
           await win.webContents.executeJavaScript(`
             const input = document.querySelector('#template-var-ITEM');
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'restarted');
             input.dispatchEvent(new Event('input', { bubbles: true }));
           `);
-          await win.webContents.executeJavaScript(`Array.from(document.querySelector('[aria-labelledby="template-vars-title"]').querySelectorAll('button')).find(b => b.textContent === 'Run').click()`);
+          await pressKey(win, 'Enter');
           await waitFor(win, `document.querySelector('.code-block pre')?.textContent.trim() === '2:"beta"' && document.querySelector('.toolbar')?.textContent.includes('grep/rg done')`);
           // A corrupt template file must be preserved and recoverable on retry.
           const file = path.join(dataDir, 'templates.json');
@@ -119,6 +152,48 @@ function waitFor(win, expression) {
           setInput('https://', ${JSON.stringify(url)});
         `);
         await waitFor(win, `document.querySelector('textarea[placeholder="curl ... | jq ... | grep ..."]').value.includes(${JSON.stringify(url)})`);
+        console.log('USABILITY_CHECK: settings write failure remains visible and retryable');
+        await activateToolbar(win, 'Global curl options');
+        const configPath = path.join(dataDir, 'config.json');
+        const beforeFailure = path.join(dataDir, 'config.before-failure.json');
+        fs.renameSync(configPath, beforeFailure);
+        fs.mkdirSync(configPath);
+        try {
+          await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('dialog button')).find(button => button.textContent === '+ Option').click()`);
+          await waitFor(win, `document.querySelector('dialog [role="alert"]')?.textContent.includes('Settings could not be saved')`);
+        } finally {
+          fs.rmdirSync(configPath);
+          fs.renameSync(beforeFailure, configPath);
+        }
+        await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('dialog button')).find(button => button.textContent === 'Retry settings save').click()`);
+        await waitFor(win, `!document.querySelector('dialog [role="alert"]')`);
+        await waitFor(win, `document.querySelectorAll('.global-option-row').length === 1`);
+        for (let i = 0; i < 100 && JSON.parse(fs.readFileSync(configPath, 'utf8')).globalCurlOptions.length !== 1; i++) {
+          await new Promise(resolve => setTimeout(resolve, 30));
+        }
+        assert.equal(JSON.parse(fs.readFileSync(configPath, 'utf8')).globalCurlOptions.length, 1);
+        await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Remove preset 1"]').click()`);
+        await waitFor(win, `document.querySelectorAll('.global-option-row').length === 0`);
+        await pressKey(win, 'Escape');
+        console.log('USABILITY_CHECK: missing curl reports failure without filtering or sending');
+        await win.webContents.executeJavaScript(`(async () => {
+          const config = await window.shell.loadWorkspaceConfig();
+          await window.shell.saveWorkspaceConfig({ ...config, curlPath: ${JSON.stringify(path.join(dataDir, 'missing', 'curl'))} });
+        })()`);
+        await activateToolbar(win, 'Run');
+        await waitFor(win, `document.querySelector('.toolbar [role="status"]')?.textContent.includes('curl failed')`);
+        assert(await win.webContents.executeJavaScript(`document.querySelector('.code-block pre')?.textContent.includes('ENOENT')`));
+        await win.webContents.executeJavaScript(`(async () => {
+          const config = await window.shell.loadWorkspaceConfig();
+          await window.shell.saveWorkspaceConfig({ ...config, curlPath: 'curl' });
+        })()`);
+        console.log('USABILITY_CHECK: cancel request variables without sending');
+        await win.webContents.executeJavaScript(`setInput('https://', ${JSON.stringify(url + '/{{PROBE}}')})`);
+        await activateToolbar(win, 'Run');
+        await waitFor(win, `document.activeElement?.id === 'request-var-PROBE'`);
+        await pressKey(win, 'Escape');
+        await waitFor(win, `!document.querySelector('dialog') && document.activeElement?.textContent === 'Run'`);
+        await win.webContents.executeJavaScript(`setInput('https://', ${JSON.stringify(url)})`);
         await win.webContents.executeJavaScript(`setInput('.data', '.[].name')`);
         await waitFor(win, `document.querySelector('textarea[placeholder="curl ... | jq ... | grep ..."]').value.includes('jq')`);
         await win.webContents.executeJavaScript(`setInput('pattern or regex', 'beta')`);
@@ -139,6 +214,10 @@ function waitFor(win, expression) {
         assert(!log.includes('beta'));
         assert(!fs.existsSync(path.join(dataDir, 'history.json')));
 
+        console.log('USABILITY_CHECK: keyboard history load never replays the request');
+        await win.webContents.executeJavaScript(`setInput('https://', ${JSON.stringify(url + '/edited')}); document.querySelector('.history-item').focus()`);
+        await pressKey(win, 'Enter');
+        await waitFor(win, `document.querySelector('[placeholder="https://"]').value === ${JSON.stringify(url)}`);
         // The learning/reuse journey uses only the synthetic local server.
         const templateUrl = url.replace('/demo', '/template/{{ITEM}}');
         await win.webContents.executeJavaScript(`setInput('https://', ${JSON.stringify(templateUrl)})`);
@@ -158,7 +237,7 @@ function waitFor(win, expression) {
           Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(name, 'Synthetic reusable request');
           name.dispatchEvent(new Event('input', { bubbles: true }));
         `);
-        await win.webContents.executeJavaScript(`document.querySelector('form[role="dialog"]').requestSubmit()`);
+        await win.webContents.executeJavaScript(`document.querySelector('[aria-labelledby="save-template-title"] form').requestSubmit()`);
         await waitFor(win, `document.querySelector('.toolbar')?.textContent.includes('Template saved')`);
         const saved = JSON.parse(fs.readFileSync(path.join(dataDir, 'templates.json'), 'utf8'));
         assert.equal(saved[0].urlTemplate, templateUrl);
@@ -175,19 +254,23 @@ function waitFor(win, expression) {
             input.dispatchEvent(new Event('input', { bubbles: true }));
           }
           editUrl(${JSON.stringify(url.replace('/demo', '/previous'))});
-          document.querySelector('.template-item').click();
+          document.querySelector('.template-item').focus();
         `);
+        await pressKey(win, 'Enter');
         await waitFor(win, `!!document.querySelector('#template-var-ITEM')`);
         await win.webContents.executeJavaScript(`
           const value = document.querySelector('#template-var-ITEM');
           Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(value, 'second');
           value.dispatchEvent(new Event('input', { bubbles: true }));
         `);
-        await win.webContents.executeJavaScript(`Array.from(document.querySelector('[aria-labelledby="template-vars-title"]').querySelectorAll('button')).find(b => b.textContent === 'Run').click()`);
+        await pressKey(win, 'Enter');
         await waitFor(win, `document.querySelector('.code-block pre')?.textContent.trim() === '2:"beta"'`);
         await waitFor(win, `document.querySelector('.toolbar')?.textContent.includes('grep/rg done')`);
         await win.webContents.executeJavaScript(`Array.from(document.querySelectorAll('button')).find(b => b.textContent === 'Run').click()`);
         await waitFor(win, `document.querySelector('[placeholder="https://"]')?.value.includes('{{ITEM}}') && !!document.querySelector('[aria-labelledby="template-vars-title"]') === false && Array.from(document.querySelectorAll('.section-title')).some(e => e.textContent === 'Provide variable values')`);
+        await waitFor(win, `document.querySelector('dialog:modal')?.getAttribute('aria-labelledby') === 'request-vars-title'`);
+        await pressKey(win, 'Escape');
+        await waitFor(win, `!document.querySelector('dialog')`);
         finish();
       } catch (e) { finish(e); }
     });
