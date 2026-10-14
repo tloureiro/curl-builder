@@ -23,7 +23,7 @@ Local typecheck, 70 tests, build, security/desktop checks passed on
 macOS/Node 24.14.1 on 2026-10-14, including clean development startup.
 The desktop check covers recognized flag descriptions, template save/disk reload,
 variable prompting, replay after a full app-process restart, and recovery from
-unreadable synthetic config/template files. GitHub CI is prepared but has not run remotely.
+unreadable synthetic config/template files. GitHub CI is configured; its remote result has not been verified.
 This is a local prototype; see the limits below.
 
 ## Prerequisites
@@ -187,3 +187,9 @@ This personal prototype was developed with AI-generated implementation, ongoing
 product guidance, and manual testing by the project owner. The current cleanup,
 documentation, and automated checks also use AI assistance. The repository is
 intended to make the resulting behavior, decisions, and validation inspectable.
+
+## License
+
+This project uses the [ISC license](LICENSE). React runtime dependency notices
+are reproduced in [third-party notices](THIRD_PARTY_NOTICES.md). Any future
+packaged distribution must also preserve the licenses/notices of what it bundles.

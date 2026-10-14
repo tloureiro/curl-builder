@@ -33,6 +33,9 @@ The entries below describe local work awaiting a release. The package's current
 
 ### Added
 
+- Complete the existing ISC license declaration with LICENSE and preserve the
+  React runtime dependencies' MIT notices.
+
 - Synthetic regressions, full-process restart/storage-recovery desktop checks,
   and a generated demo screenshot.
 - Product scope, architecture, contribution and coding-agent documentation.
@@ -40,8 +43,9 @@ The entries below describe local work awaiting a release. The package's current
 
 ### Known limits
 
-Broader UX review, initial-commit verification, license/source attribution and
-packaged/cross-platform distribution remain open. Runtime boundaries and dated
-dependency checks are documented in [security](docs/SECURITY.md). CI and
-Dependabot configuration have not been exercised on GitHub. See
+Broader UX review, publication privacy checks and packaged/cross-platform
+distribution remain open. Packaged artifacts need a distribution-specific
+third-party notice review. Runtime boundaries and dated
+dependency checks are documented in [security](docs/SECURITY.md). Remote CI/Dependabot
+results have not been verified. See
 [product scope](PRODUCT.md) and [maintenance guidance](docs/MAINTENANCE.md).

@@ -43,7 +43,7 @@ application suites unless a behavior or setup claim changed.
 
 The local baseline was verified on macOS with Node 24.14.1 on 2026-10-14. The
 [CI workflow](.github/workflows/checks.yml) prepares the same non-GUI checks on
-Ubuntu/Node 24, but has not yet been run on GitHub. It does not establish Linux
+Ubuntu/Node 24, but its remote result has not been verified. It does not establish Linux
 desktop support. There is no configured lint command; do not claim one passed.
 
 ## Maintenance conventions
@@ -68,5 +68,8 @@ and verifying the change, not from concealing how it was produced.
 
 Before committing, inspect the diff for personal settings, credentials, request
 bodies/responses, account/customer identifiers, and temporary artifacts. The
-tracked legacy config/history and license/source attribution still need review
-before publication. Follow [execution/data limits](docs/SECURITY.md). Do not place confidential reports in public issue text.
+source and history need review before publication. Keep personal runtime files
+ignored, follow the [ISC license](LICENSE), and retain applicable
+[third-party notices](THIRD_PARTY_NOTICES.md). Follow
+[execution/data limits](docs/SECURITY.md). Do not place confidential reports in
+public issue text.
