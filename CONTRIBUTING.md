@@ -54,18 +54,15 @@ dependency updates, and manual version/release convention. Keep change notes in
 [CHANGELOG.md](CHANGELOG.md)'s Unreleased section until an actual release is made.
 Hooks are opt-in and preserve existing custom setups.
 
-## Review and AI assistance
+## Review
 
 Describe what changed for the user, why it is in scope, which checks actually ran,
 and what remains unverified. Add a regression that reproduces a meaningful bug;
 avoid tests that merely restate implementation details. Update docs when changing
 scope, startup, commands, storage, or execution semantics.
 
-AI-assisted contributions are welcome. State the assistance used and the human
-review/verification performed when describing a change. Keep original authorship
-separate from later generated/refined work; do not invent user research, adoption,
-performance results, or historical rationale. Ownership comes from understanding
-and verifying the change, not from concealing how it was produced.
+Describe the review and verification performed. Keep claims about user research,
+adoption, performance results, and historical rationale supported by evidence.
 
 Before committing, inspect the diff for personal settings, credentials, request
 bodies/responses, account/customer identifiers, and temporary artifacts. The

@@ -194,13 +194,6 @@ npm run scenarios -- --file scenarios/sample.json
 The scenario tool renders a checklist and supports `--type` and `--id` filters.
 See [scenarios/sample.json](scenarios/sample.json) for the format.
 
-## Development and contribution
-
-This personal prototype was developed with AI-generated implementation, ongoing
-product guidance, and manual testing by the project owner. The current cleanup,
-documentation, and automated checks also use AI assistance. The repository is
-intended to make the resulting behavior, decisions, and validation inspectable.
-
 ## License
 
 This project uses the [ISC license](LICENSE). React runtime dependency notices

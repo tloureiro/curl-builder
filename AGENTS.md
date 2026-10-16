@@ -105,6 +105,6 @@ release/tag/publish automation or tooling framework is needed for this prototype
 ## Finish
 
 Keep README/product/architecture docs consistent with changed behavior. Summarize
-user-visible impact, rationale, tests actually run, and remaining gaps. Disclose
-AI assistance and do not invent authorship, user feedback, metrics, or original
-historical decisions. Use CONTRIBUTING.md and the PR template for review details.
+user-visible impact, rationale, tests actually run, and remaining gaps. Keep
+claims about user feedback, metrics, attribution, and historical decisions accurate.
+Use CONTRIBUTING.md and the PR template for review details.

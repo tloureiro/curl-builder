@@ -17,7 +17,7 @@ that remain unrun and known limitations.
 Describe changes to request execution, storage, supported environments, or public
 API. Link updated docs where relevant. Leave this section out if none changed.
 
-## Contribution and assistance
+## Review notes
 
-Describe relevant AI assistance and the review/verification performed. Omit private
-inputs, credentials, employer/customer details, and unrelated personal context.
+Describe any additional review needed. Omit private inputs, credentials,
+employer/customer details, and unrelated personal context.
