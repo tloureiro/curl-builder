@@ -20,7 +20,10 @@ without a shell; a preload bridge connects it to the renderer.
 - [Changelog](CHANGELOG.md): actual pending changes and release notes.
 
 Local typecheck, 75 tests, build, security/desktop checks passed on
-macOS/Node 24.14.1 on 2026-10-14, including clean development startup.
+macOS/Node 24.14.1 with Electron 44.9.3 on 2026-10-25. Clean development startup
+was separately checked on October 14. The
+[dependency review](docs/SECURITY.md#dependency-review-2026-10-25) records the
+certificate fix, toolchain updates and remaining embedded-Undici limitation.
 The desktop check covers recognized flag descriptions, template save/disk reload,
 variable prompting, replay after a full app-process restart, and recovery from
 unreadable synthetic config/template files. The owner reports GitHub Checks passed for commit 6b41de4; the pending

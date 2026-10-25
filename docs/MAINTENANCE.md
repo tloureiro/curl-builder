@@ -45,7 +45,12 @@ updates, not an instruction to defer security fixes.
 
 Review proposed changes and run the meaningful checks before merging. The October 14 update removed unused packages and refreshed Electron/tooling and
 compatible transitive dependencies. The locked tree returned zero known npm
-advisories that day; future findings still require manual triage. The owner reports Checks passed for 6b41de4; later local changes and Dependabot
+advisories that day. The [October 25 review](SECURITY.md#dependency-review-2026-10-25)
+updates Electron, Undici and Vitest and records the embedded-Undici limitation
+separately from the clean npm audit. Review Electron as runtime software even
+when its lockfile entry says `dev: true`; check the full tree and embedded runtime
+versions rather than relying on `npm audit --omit=dev`.
+The owner reports Checks passed for 6b41de4; later local changes and Dependabot
 execution still need their own verification;
 there is no configured automatic merge or package publication.
 

@@ -66,11 +66,76 @@ cleanup. Never use this as encrypted storage or promise cross-platform hardening
 
 ## Dependencies and reporting
 
-The locked tree's npm audit returned zero known advisories on 2026-10-14 after
-updates and removing unused packages. This is a dated registry result, not proof
-that Electron, system CLI tools or application code have no vulnerabilities.
+The locked tree's npm audit returned zero known advisories on 2026-10-25 after
+the dependency review below. This is a dated registry result, not proof
+that Electron's embedded dependencies, system CLI tools or application code have
+no vulnerabilities. Electron is the application runtime even though npm marks
+it as a development dependency; `npm audit --omit=dev` excludes that runtime.
 Run `npm audit` again before distribution and after dependency changes; use the
 [maintenance workflow](MAINTENANCE.md) and relevant behavioral/desktop checks.
+
+### Dependency review: 2026-10-25
+
+| Component | Previous lock | Selected lock | Reason |
+| --- | --- | --- | --- |
+| Electron runtime | 44.7.2 | 44.9.3 | Certificate mitigation starts at 44.9.1; 44.9.3 also includes later upstream fixes |
+| Undici npm package | 7.30.0 | 7.30.1 | Fixes EventSource memory exhaustion, mixed-case integrity bypass and excessive content-encoding crash |
+| Vitest and its mocker | 4.1.11 | 4.1.12 | Backports manual-mock injection and Windows redirect-traversal fixes |
+
+The update described in the [Electron certificate advisory](https://github.com/electron/electron/security/advisories/GHSA-jr5w-w6x2-84p9)
+blocks compromised eMudhra intermediates in both Chromium networking and Node
+TLS/HTTPS/fetch. A network interceptor with a certificate issued through those
+intermediates could impersonate a server. The advisory requires updating Electron;
+renderer sandboxing does not repair certificate verification. The selected
+[44.9.3 release](https://releases.electronjs.org/release/v44.9.3) stays on the existing
+major and includes the mitigation introduced in 44.9.1.
+
+The npm Undici path is `electron → @electron/get@5.1.0 → undici`. It is an optional
+dependency used for downloader proxy support. The downloader itself uses the
+installing Node's built-in fetch, so updating this package does not update either
+the host Node or Electron's embedded fetch. The three npm advisories are
+[EventSource memory exhaustion](https://github.com/nodejs/undici/security/advisories/GHSA-4qv8-2p9j-2685),
+[integrity bypass](https://github.com/nodejs/undici/security/advisories/GHSA-f72v-6w45-q472)
+and [content-encoding crash](https://github.com/nodejs/undici/security/advisories/GHSA-xjj6-f33q-929c).
+All are fixed on this npm major by 7.30.1; no override or direct runtime dependency
+was added.
+
+Vitest's [manual-mock injection](https://github.com/vitest-dev/vitest/security/advisories/GHSA-qxg6-89mg-rqv8)
+and [Windows traversal](https://github.com/vitest-dev/vitest/security/advisories/GHSA-xp26-3454-mjgp)
+require a reachable Vite server registering the affected mocker WebSocket handlers.
+This project runs jsdom tests with `vitest run`; its application Vite config does
+not register `mockerPlugin` or `interceptorPlugin`. Loopback binding reduces network
+reachability but is not the fix. Vitest 4.1.12 updates its matching internal packages
+and remains compatible with Vite 7.3.7 and jsdom 26.1.0. The chosen packages' Node
+engine requirements fit the project's declared Node range.
+
+**Embedded runtime limit:** the installed Electron 44.9.3 reports Node 24.22.0,
+Chromium 152.0.7977.167 and embedded Undici 7.29.1. A separate synthetic loopback
+probe confirmed that its built-in fetch accepts a mismatched SHA256 integrity
+value with an uppercase algorithm, while npm Undici 7.30.1 rejects it. The embedded
+copy therefore still exhibits the integrity advisory; a zero npm audit does not
+close it. [Electron 45.0.0](https://releases.electronjs.org/release/v45.0.0) also
+advertises Node 24.22.0, so a major upgrade alone
+is not evidence of an embedded fix. Recheck upstream Electron before introducing
+Node fetch/EventSource or distributing the app. Keep the host Node patched too;
+the [October 21 Node security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)
+updates bundled Undici separately. This review did not change the host Node.
+
+Current source does not use Node fetch/EventSource or Node TLS networking for
+requests. The bundled renderer has `connect-src 'none'`, and development permits
+only the configured loopback server. Requests execute in system curl through
+validated IPC and argument arrays with `shell: false`; jq/grep receive stdin and
+a restricted environment. These boundaries limit the reachable paths; they do
+not patch embedded libraries. System curl's TLS implementation and certificate
+store are independent of Electron and were not certified by this review.
+
+Verification on macOS with host Node 24.14.1: `npm ci`, `npm run check` (typecheck,
+75 tests and build), full `npm audit` and `npm run test:desktop` passed. The desktop
+check exercised the actual sandboxed renderer/preload, CSP, rejected IPC/window
+actions, curl/jq/grep, three-process restart/replay and synthetic storage recovery;
+the refreshed screenshot was inspected. The runtime version and loopback integrity
+probes used Electron's Node mode. No compromised-certificate handshake, other-platform
+desktop support or exhaustive security audit was tested.
 
 Do not include credentials, private endpoints, request/response values or personal
 config in public reports. Review current files and Git history before sharing a

@@ -5,6 +5,14 @@
 The entries below describe local work awaiting a release. The package's current
 0.1.0 version is prototype metadata; no release has been created for this cleanup.
 
+### Security
+
+- Update Electron 44.7.2 to 44.9.3 for the compromised eMudhra certificate
+  mitigation and later upstream fixes, treating Electron as the application runtime.
+- Update downloader Undici 7.30.0 to 7.30.1 and Vitest/mocker 4.1.11 to 4.1.12.
+  Validate with the existing source and desktop checks; document that Electron's
+  separate embedded Undici still exhibits the integrity bypass on an unused path.
+
 ### Changed
 
 - Use native modal dialogs for save/variables/presets with keyboard focus containment,
