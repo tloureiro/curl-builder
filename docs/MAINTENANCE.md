@@ -50,6 +50,11 @@ updates Electron, Undici and Vitest and records the embedded-Undici limitation
 separately from the clean npm audit. Review Electron as runtime software even
 when its lockfile entry says `dev: true`; check the full tree and embedded runtime
 versions rather than relying on `npm audit --omit=dev`.
+The [November 2 update](SECURITY.md#dependency-update-2026-11-02) refreshes
+`follow-redirects` and `joi` and removes `rimraf` and its vulnerable glob tree.
+The build clean script now uses Node's built-in file removal. The full locked-tree
+audit and source/desktop checks passed locally on that date; embedded runtime
+limitations remain separately documented.
 The owner reports Checks passed for 6b41de4; later local changes and Dependabot
 execution still need their own verification;
 there is no configured automatic merge or package publication.

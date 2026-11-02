@@ -7,6 +7,10 @@ The entries below describe local work awaiting a release. The package's current
 
 ### Security
 
+- Refresh locked `follow-redirects` and `joi` to versions that address npm
+  advisories found on November 2, 2026. Remove `rimraf` and its vulnerable `glob`/
+  `minimatch` tree; the build clean step now uses Node's built-in file removal.
+  The full locked-tree npm audit returned zero advisories on 2026-11-02.
 - Update Electron 44.7.2 to 44.9.3 for the compromised eMudhra certificate
   mitigation and later upstream fixes, treating Electron as the application runtime.
 - Update downloader Undici 7.30.0 to 7.30.1 and Vitest/mocker 4.1.11 to 4.1.12.

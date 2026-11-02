@@ -66,13 +66,29 @@ cleanup. Never use this as encrypted storage or promise cross-platform hardening
 
 ## Dependencies and reporting
 
-The locked tree's npm audit returned zero known advisories on 2026-10-25 after
-the dependency review below. This is a dated registry result, not proof
+The locked tree's npm audit returned zero known advisories on 2026-11-02 after
+the dependency update below. This is a dated registry result, not proof
 that Electron's embedded dependencies, system CLI tools or application code have
 no vulnerabilities. Electron is the application runtime even though npm marks
 it as a development dependency; `npm audit --omit=dev` excludes that runtime.
 Run `npm audit` again before distribution and after dependency changes; use the
 [maintenance workflow](MAINTENANCE.md) and relevant behavioral/desktop checks.
+
+### Dependency update: 2026-11-02
+
+The full npm audit reported five findings: high severity advisories in
+`follow-redirects` 1.16.1 and `joi` 18.2.9, and moderate findings in `glob`
+13.0.0, `minimatch` 10.2.6, and their parent `rimraf` 6.1.2. The first two
+packages come through `wait-on`; their locked versions are now 1.16.2 and
+18.3.1 within the existing dependency ranges. `rimraf` served only the build
+clean script, so Node's built-in `fs.rmSync` replaces it and removes its
+`glob`/`minimatch` tree. No npm override was needed.
+
+On macOS with Node 24.14.1, `npm ci`, `npm run check` (75 tests and build),
+the full `npm audit`, and `npm run test:desktop` passed. The desktop check used
+synthetic loopback data and three independent Electron processes; its refreshed
+screenshot was inspected. The earlier embedded Electron Undici limitation below
+was not re-evaluated by this npm audit or dependency update.
 
 ### Dependency review: 2026-10-25
 

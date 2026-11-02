@@ -24,6 +24,9 @@ macOS/Node 24.14.1 with Electron 44.9.3 on 2026-10-25. Clean development startup
 was separately checked on October 14. The
 [dependency review](docs/SECURITY.md#dependency-review-2026-10-25) records the
 certificate fix, toolchain updates and remaining embedded-Undici limitation.
+The [November 2 dependency update](docs/SECURITY.md#dependency-update-2026-11-02)
+removed newly reported npm advisories; `npm ci`, the 75-test check/build, full
+audit, and desktop workflow passed locally on macOS with Node 24.14.1.
 The desktop check covers recognized flag descriptions, template save/disk reload,
 variable prompting, replay after a full app-process restart, and recovery from
 unreadable synthetic config/template files. The owner reports GitHub Checks passed for commit 6b41de4; the pending
